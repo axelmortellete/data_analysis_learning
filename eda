@@ -1,0 +1,240 @@
+#1 PART 1 INTRO FIRST SECTION
+
+# When we are working with a dataset, we want to be able to ask questions such as "is this good data?" or "What questions can it answer for us?" EDA(Exploratory Data Analysis) is the process of cleaning and reviewing data, in order to gain insights such as descriptive stats and correlation and be able to generate hypotheses for experiements.
+# EDA is useful because it allows us to take the next steps for the dataset, like generating a hypothesis, preparing data for a machine learning  model or deeming that the data is insufficient/irrelevant. 
+
+# HOW DO WE EXPLORE THE DATA? 
+# The first steps into exploring the data starts with importing the dataset and utilising a few key panda methods in order to get the jist of the dataset. 
+
+# Importing data = pd.read_csv() e.g. new_books = pd.read_csv(old_books.csv)
+
+# Looking at several rows of the dataset = .head() = e.g. new_books.head()
+
+# You can review the data type, memory usage and count the missing values = .info()
+
+# To check the count of categorical data = .value_counts()
+
+# Gain a quick understanding of the DF = .describe() which shows the min, max, quartile values, mean and std.
+
+# Want to VISUALISE numeric data? histograms can look at the distribution of numerical data! Use sns.histplot( data = ? , x = ? , binwidth = ? )
+
+#1 PART 2
+# VALIDATING DATA TYPES
+
+# Want to change data types? Use the .dtypes attribute! Use .dt.astype() method to change the actual data type!
+# We can also check categorical data that includes a certain string value through .isin() e.g. 
+
+books["genre"].isin(["Fantasy"])
+
+# We can also use tilde() to invert the code to check if books DOES NOT have a certain genre. 
+
+~books["genre"].isin("Sci-fi")
+
+# We can also select only specific columns by data type through .select_dtypes() e.g.
+
+books.select_dtypes("number")
+
+# VALIDATING NUMERICAL DATA
+# We can check numerical data through either calling .min() or .max() for example, or use a boxplot through seaborn as sns.boxplot() as this visually shows the quartiles, the min, the max, the median! e.g.
+
+sns.boxplot( data = books, x = "year" , y = "genre" )
+
+# PART 3 - DATA SUMMERISATION 
+
+# .groupby()
+# We can start to explore the characteristics of certain subsets of data with the function .groupby() which groups data by a designated category in order to aggregate each category! For example, if we wanted to find the mean of every category in the genre column:
+
+books.groupby("genre").mean()
+
+# There are also other aggregating functions we can utilise to chain with .groupby() such as .sum(), .count(), .min()/.max(), .var(), .std()
+
+# .agg()
+# We can use .agg() to apply aggregating functions, which aggregates data across all rows in a given column, and is generally used when we are looking for more numerous aggregating functions. e.g.
+
+books.agg({"rating": ["mean", "std"], "year": ["median"]})
+
+# To explain: We aggregate 2 columns with different measurements, and we use a dictionary pair to tell Python for which aggregation, would you like to use for which specific column.
+
+# Q: What if we want to find out the mean, std of rating and median year? We can utilise both .groupby() and .agg() in order to do this!
+
+books.groupby("genre").agg(
+    mean_rating = ("rating", "mean"), # creating a mean_rating column, "rating" is the column we want to use, then we .mean() it!
+    std_rating = ("rating", "std"), # creating a std_rating column, "rating" is the column we want to use, then we .std() it! 
+    median_year = ("year", "median") 
+)
+
+# sns.barplot()
+# Using .barplot(), we can visualise similar info. 
+
+sns.barplot(data = books, x = "genre", y = "rating")
+
+#2 DATA CLEANING AND IMPUTATION 
+
+# WHY IS IT IMPORTANT TO DEAL WITH MISSING DATA? It's important to address missing data as it can affect the distribution, as it will be less reliable, less represntitive of the total population, which will lead to drawing the WRONG conclusions. 
+
+# How can we count the missing data? We can just simply use:
+
+books.isna().sum() # The chained functions allows us to see the total number of NAs in the entire data frame. 
+
+# WHEN DO WE REMOVE MISSING VALUES? We follow the rule of thumb - if the missing data amounts to 5% or less (of all values), we remove the data. However, if we have more missing values, we replace them with a summary statistic such as mean, median or mode (depending on the context).
+
+# A quick way of finding which columns meet/don't meet the threshold:
+
+threshold = len(books) * 0.05 # Gets the value of the 5% threshold
+
+cols_to_drop = books.columns[books.isna().sum() <= threshold ] # We create a variable called "cols_to_drop", .columns attribute to select on the columns, then test these columns for the boolean index filtering of "do these columns have more NAs than the threshold?"
+
+# HOW DO WE DROP THESE VALUES?
+
+books.dropna(subset = cols_to_drop, inplace = True) # We therefore tell Python that we want to drop the columns that don't meet the threshold, by subsetting by "cols_to_drop" amd then making sure the data frame is saved with dropping these columns.
+
+# OR, if we want to find columns with any missing values:
+
+cols_with_missing_values = books.columns(books.isna().sum() > 0) # Same as before, but instead we are asking if there are any missing values at all!
+
+for col in cols_with_missing_values[:-1]:
+    books[col].fillna(books[col].mode()[0])
+
+# Checking values with .dict()#
+
+books_dict = books.groupby("genre")["Sales_USD"].median.to_dict()
+
+# Finding unique values in a column!
+
+print(books["genre"].nunique())
+
+# Searching a column for a specific string with .str.contains()
+
+books["book_title"].str.contains("adventures")
+
+# Or with multiple search criterias!
+
+books["book_title"].str.contains("adventures|of")
+
+# Filtering with something that starts with something!
+
+books["book_title"].str.contains("^adventures")
+
+# Removing part of a string value with .str.replace()
+
+books["genre"].str.replace("characters to remove", "character to replace with")
+
+# Creating new columns with statistical calculations with .transform()
+
+.transform(lambda x: x.median()) # "For each group, calculate the median of the group's values and return that median for every row in the group."
+
+.transform('median') # Is the simpler version. 
+
+# DEALING WITH OUTLIERS.
+
+books["Book_Sales_USD"].describe() # A starting to point to investigating outliers.
+
+# The Interquartile Range (IQR)
+
+twenty_fifth = books["Book_Sales_USD"].quantile(0.25)  # The lower quantile, 25%
+seventy_fifth = books["Book_Sales_USD"].quantile(0.25)  # The upper quantile, 75%
+
+book_sales_iqr = seventy_fifth - twenty_fifth
+
+
+upper = seventy_fifth + (1.5 * book_sales_iqr)
+lower = twenty_fifth - (1.5 * book_sales_iqr)
+
+# Why look for outliers? Outliers are extreme values that aren't neccessarily relevant to the data, as they may not be representitive of the data, which they can skew the mean and std of the data.  If we plan on performing stat tests or machine learning, we need to have data that is accuarate as possible! We should remove outliers as a result.
+
+# PART 3 - PATTERNS OVER TIME
+
+# When data inclues dates or time values, we'll want to examine if there are patterns/trends over time.
+
+# We need to always double check if Python recognises the data is in fact date or time data. When a CSV is imported into pandas, they typically get recognised as strings, not DateTime data.
+
+# Transforming string to DateTime
+
+pd.to_datetime # converts data to DateTime values.
+
+books["Release_Date"] = pd.to_datetime(books["Release_Date"])
+
+books["Release_Date"] = pd.to_datetime(books[["day", "month", "year"]])  # We can also combine several date columns together.
+
+books["Release_Date"].dt.year # Extract part of the date, with dt.year, dt.month, dt.day 
+
+# LINEPLOTS - Visualising patterns over time
+
+# Line plots can help us examine relationships between variables visually. Utilising seaborn, it shows the estimated mean and a confidence interval for that estimate. The blue line represents the mean, whereas the light blue shading represents the confidence interval of 95% probability.  Wider confidence levels may suggest that the relationship between the 2 variables may need investigating. 
+
+
+sns.lineplot(data = , x = , y = ) #
+plt.show() #
+
+# CORRELATION - Correlation is the direct relationship between two variables, and the strength of that relationship. Understanding how variables are correlated, can help us predict future outcomes. A quick method to see the correlation of numeric columns is though:
+
+.corr()
+
+# A negative correlation coefficient indicates that as one variable increases, the other decreases. A value closer to zero suggests that there is a weak relationship between the variables, whereas a value closer to one or negative one suggests a relationship. Note: .corr calculates the Pearson correlation coefficient, which measures the linear relationship between two varibables.
+
+# PEARSON COEFFICIENT
+# Variables can have a strong non-linear relaitonship and a Pearson correlation coefficient is close to 0. However, data might have a correlation coefficient indicating a strong linear relationship when another relationship, such as quadratic, is actually a better fit for the data, which is why it's important to complement the correlation calculations with scatterplots. 
+
+# Correlation heatmaps - We can wrap .corr() into a Seaborn heatmap, so we can visually interpret the results. The heatmap has colour coding, so it's clear which have strong positive and negative correlations. 
+
+# NOTE: It is important to note that we must always interpret the correlations within the context of the data.
+
+# Visualising relationships are pretty crucical to gain a quick and clear understanding of the data. The Pearson coefficient that we use only describes a linear correlation between variables; however, the data might show other relationships such as quadratic which may be the better fit for the data - this is why it is important to complement correlation calculations with scatter plots.
+
+# PAIRPLOTS
+
+# Scatterplots are useful, however seaborn's pairplots can pair all relationships between numerical variables in one visualisation. Pairplots are useful to quickly overview all relationships within the dataset and we can control which variables we can see by passing some syntax.                                                                                                                                                                                                                                                                             
+
+# Correlation heatmaps - We can wrap .corr() into a Seaborn heatmap, so we can visually interpret the results. The heatmap has colour coding, so it's clear which have strong positive and negative correlations. 
+
+# NOTE: It is important to note that we must always interpret the correlations within the context of the data.
+
+# Besides numerical relationships, we can also look at relationships between categorical variables. These variables are difficult to summerise numerically, so we have to rely on visualisations to explore these relationships.
+
+# Histograms are a useful way to show the distribution of data
+
+
+# Kernal Density Estimate plots (KDE) can also be handy, as they also visualise the distribution of data, however KDEs are suggested to be the superior option, as they can visualise multiple distributions; however, it is important to set good smoothing parameters for the KDE plot, as the plots can include data that doesn't make sense.
+
+sns.kdeplot(data = books, x = "book_sales_usd", hue = "marketing_spent", cut = 0, cumulitive = True) 
+
+# Where "cut" is the cut off point.
+# 
+
+plt.show()
+
+# CONSIDERATIONS for categorical data
+
+#  HOW do convert exploratory data analysis into action? EDA is performed for a variety of reasons like finding patterns and relationships within the data, generating questions or hypotheses or to prepare data for machine learning models. 
+
+# HOWEVER, it should be essential that the data must be representitive of the population we wish to focus on. For example, if we want to look at the relationship of education and income levels in the US, we cannot rely on data from France!
+
+# Class imbalances can occur, this is when we perform EDA and we realise that some categories have signicantly more data as opposed to others. We have to question if this accurately represents the population. 
+
+# We can see the proportions of the classes (categories) with .value_counts() when we include in the syntax normalize = true
+
+.value_counts(normalize = True)
+
+# Cross-tabulation is another method of looking at class frequency, which enables us to examine the frequency of combinations of classes.
+
+pd.crosstab(books["genre"], books["format"], value = "book_sales_usd", aggfunc = "sum")
+
+# Comparing the two categorical columns, we assign a numerical column as a value and paired with an aggregation feature - as the value tells Python which column to calculate and the aggfunc tells Python what to do with the numerical column!
+
+# GENERATING NEW FEATURES
+
+# The dataset we receive may be limited, which could directly effect the potential performance of machine learning models we want to make. One way to overcome this challenge is generate new features from our existing data. 
+
+pd.cut() # Define bins, creates new columns assigning them to each value to its bin
+
+pd.cut(book["price"],
+      bins = [0, 5, 10, 20], # assigns where to cut the data up
+      labels = ["Cheap", "Low", "Mid-range", "Expensive"]) # assign values belong to which label.
+
+# Visualising value_counts()
+
+sns.countplot(data = books, x = "book_sales_usd", hue = "genres") # We visualise the genre of books by sales.
+
+# GENERATING HYPOTHESIS 
+
+#  When performing EDA, the question we should ask is how do we know what we are observing is true?  We need to conduct Hypothesis Testing - we should come up with a hypothesis or quesation, and specifiying a statistical test that we will perform in order to reasonably conclude whether the hypothesis was true or false!
